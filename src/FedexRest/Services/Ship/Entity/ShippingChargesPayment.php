@@ -8,19 +8,33 @@ class ShippingChargesPayment
     public array $payor = [];
 
     /**
-     * @param string  $paymentType
+     * @param string|null $paymentType
      * @return $this
      */
-    public function setPaymentType(string $paymentType): ShippingChargesPayment
+    public function setPaymentType(?string $paymentType): ShippingChargesPayment
     {
         $this->paymentType = $paymentType;
         return $this;
     }
 
+    public function getPaymentType(): ?string
+    {
+        return $this->paymentType;
+    }
+
+    /**
+     * @param array $payor
+     * @return $this
+     */
     public function setPayor(array $payor): ShippingChargesPayment
     {
         $this->payor = $payor;
         return $this;
+    }
+
+    public function getPayor(): array
+    {
+        return $this->payor;
     }
 
     public function prepare(): array

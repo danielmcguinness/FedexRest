@@ -64,14 +64,11 @@ class CancelShipment extends AbstractRequest
             throw new MissingTrackingNumberException('The tracking number is required');
         }
 
-        try {
-            $query = $this->http_client->put($this->getApiUri($this->api_endpoint), [
-                'json' => $this->prepare(),
-                'http_errors' => false,
-            ]);
-            return ($this->raw === true) ? $query : json_decode($query->getBody()->getContents());
-        } catch (\Exception $e) {
-            return $e->getMessage();
-        }
+        $query = $this->http_client->put($this->getApiUri($this->api_endpoint), [
+            'json' => $this->prepare(),
+            'http_errors' => false,
+        ]);
+
+        return ($this->raw === true) ? $query : json_decode($query->getBody()->getContents());
     }
 }

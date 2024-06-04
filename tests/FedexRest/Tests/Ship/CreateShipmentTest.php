@@ -401,12 +401,10 @@ class CreateShipmentTest extends TestCase
         $output = $request->output;
         $this->assertNotEmpty($output->transactionShipments);
         $new_shipment = $output->transactionShipments[0];
-        echo print_R($new_shipment, true);
         $this->assertNotEmpty($new_shipment->masterTrackingNumber);
         $this->assertEquals('FEDEX_GROUND', $new_shipment->serviceType);
         $this->assertNotEmpty($new_shipment->pieceResponses);
         $this->assertNotEmpty($new_shipment->completedShipmentDetail);
         $this->assertEquals('GROUND', $new_shipment->serviceCategory);
     }
-
 }

@@ -2,7 +2,6 @@
 
 namespace FedexRest\Services\Rates;
 
-use Exception;
 use FedexRest\Entity\Item;
 use FedexRest\Entity\Person;
 use FedexRest\Exceptions\MissingAccessTokenException;
@@ -357,20 +356,18 @@ class CreateRatesRequest extends AbstractRequest
         if (empty($this->accountNumber)) {
             throw new MissingAccountNumberException('The account number is required');
         }
+
         if (empty($this->lineItems)) {
             throw new MissingLineItemException('Line items are required');
         }
 
-        try {
-          $prepare = $this->prepare();
+        $prepare = $this->prepare();
 
-            $query = $this->http_client->post($this->getApiUri($this->api_endpoint), [
-                'json' => $prepare,
-                'http_errors' => false,
-            ]);
-            return ($this->raw === true) ? $query : json_decode($query->getBody()->getContents());
-        } catch (Exception $e) {
-            return $e->getMessage();
-        }
+        $query = $this->http_client->post($this->getApiUri($this->api_endpoint), [
+            'json' => $prepare,
+            'http_errors' => false,
+        ]);
+
+        return ($this->raw === true) ? $query : json_decode($query->getBody()->getContents());
     }
 }
