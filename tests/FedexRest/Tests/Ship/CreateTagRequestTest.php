@@ -11,9 +11,13 @@ use FedexRest\Entity\Weight;
 use FedexRest\Exceptions\MissingAccountNumberException;
 use FedexRest\Exceptions\MissingAuthCredentialsException;
 use FedexRest\Services\Ship\CreateTagRequest;
+use FedexRest\Services\Ship\Entity\Label;
+use FedexRest\Services\Ship\Entity\ShipmentSpecialServices;
+use FedexRest\Services\Ship\Entity\ShippingChargesPayment;
 use FedexRest\Services\Ship\Type\PackagingType;
 use FedexRest\Services\Ship\Type\PickupType;
 use FedexRest\Services\Ship\Type\ServiceType;
+use FedexRest\Services\Ship\Type\ShipmentSpecialServiceType;
 use GuzzleHttp\Exception\GuzzleException;
 use PHPUnit\Framework\TestCase;
 
@@ -32,9 +36,8 @@ class CreateTagRequestTest extends TestCase
     public function testHasAccountNumber()
     {
         try {
-
             $request = (new CreateTagRequest)
-                ->setAccessToken((string) $this->auth->authorize()->access_token)
+                ->setAccessToken((string)$this->auth->authorize()->access_token)
                 ->request();
 
         } catch (MissingAccountNumberException $e) {
@@ -44,9 +47,8 @@ class CreateTagRequestTest extends TestCase
 
     public function testRequiredData()
     {
-
         $request = (new CreateTagRequest)
-            ->setAccessToken((string) $this->auth->authorize()->access_token)
+            ->setAccessToken((string)$this->auth->authorize()->access_token)
             ->setAccountNumber(740561073)
             ->setServiceType(ServiceType::_FEDEX_GROUND)
             ->setRecipients(
@@ -69,11 +71,37 @@ class CreateTagRequestTest extends TestCase
     public function testPrepare()
     {
         $request = (new CreateTagRequest)
-            ->setAccessToken((string) $this->auth->authorize()->access_token)
+            ->setAccessToken((string)$this->auth->authorize()->access_token)
             ->setAccountNumber(740561073)
             ->setServiceType(ServiceType::_FEDEX_GROUND)
             ->setPackagingType(PackagingType::_YOUR_PACKAGING)
             ->setPickupType(PickupType::_DROPOFF_AT_FEDEX_LOCATION)
+            ->setShippingChargesPayment(
+                (new ShippingChargesPayment())
+                    ->setPaymentType('SENDER')
+                    ->setPayor(['responsibleParty' => [
+                        'accountNumber' => [
+                            'value' => 740561073
+                        ]
+                    ]])
+            )
+            ->setShipmentSpecialServices(
+                (new ShipmentSpecialServices())
+                    ->setSpecialServiceTypes([
+                        'specialServiceTypes' => [
+                            'RETURN_SHIPMENT',
+                        ]
+                    ])
+                    ->setReturnShipmentDetails([
+                        'returnType' => 'PRINT_RETURN_LABEL',
+                    ])
+            )
+            ->setLabel(
+                (new Label())
+                    ->setLabelFormatType('COMMON2D')
+                    ->setLabelStockType('PAPER_7X475')
+                    ->setImageType('PNG')
+            )
             ->setRecipients(
                 (new Person)
                     ->setPersonName('Lorem')
@@ -100,19 +128,42 @@ class CreateTagRequestTest extends TestCase
                         ->setUnit('LB')
                 ));
         $prepared = $request->prepare();
-        $this->assertEquals('Boston', $prepared['json']['requestedShipment']['recipients'][0]['address']['city']);
+
+        $this->assertEquals('Boston', $prepared['requestedShipment']['recipients'][0]['address']['city']);
     }
 
     public function testRequest()
     {
         try {
             $request = (new CreateTagRequest())
-                ->setAccessToken((string) $this->auth->authorize()->access_token)
+                ->setAccessToken((string)$this->auth->authorize()->access_token)
                 ->setAccountNumber(740561073)
                 ->setServiceType(ServiceType::_FEDEX_GROUND)
                 ->setPackagingType(PackagingType::_YOUR_PACKAGING)
                 ->setPickupType(PickupType::_DROPOFF_AT_FEDEX_LOCATION)
                 ->setShipDatestamp(Carbon::now()->addDays(3)->format('Y-m-d'))
+                ->setShippingChargesPayment(
+                    (new ShippingChargesPayment())
+                        ->setPaymentType('SENDER')
+                        ->setPayor(['responsibleParty' => [
+                            'accountNumber' => [
+                                'value' => 740561073
+                            ]
+                        ]])
+                )
+                ->setShipmentSpecialServices(
+                    (new ShipmentSpecialServices())
+                        ->setSpecialServiceTypes([ShipmentSpecialServiceType::_RETURN_SHIPMENT])
+                        ->setReturnShipmentDetails([
+                            'returnType' => 'PRINT_RETURN_LABEL',
+                        ])
+                )
+                ->setLabel(
+                    (new Label())
+                        ->setLabelFormatType('COMMON2D')
+                        ->setLabelStockType('PAPER_7X475')
+                        ->setImageType('PNG')
+                )
                 ->setShipper(
                     (new Person)
                         ->setPersonName('SHIPPER NAME')
@@ -147,9 +198,10 @@ class CreateTagRequestTest extends TestCase
                             ->setUnit('LB')
                     ))
                 ->request();
-        } catch (MissingAccountNumberException | MissingAuthCredentialsException | GuzzleException $e) {
+        } catch (MissingAccountNumberException|MissingAuthCredentialsException|GuzzleException $e) {
             $this->assertEmpty($e, sprintf('The request failed with message %s', $e->getMessage()));
         }
+
         $this->assertObjectHasProperty('transactionId', $request);
         $this->assertObjectHasProperty('encodedLabel',
             $request->output->transactionShipments[0]->pieceResponses[0]->packageDocuments[0]);

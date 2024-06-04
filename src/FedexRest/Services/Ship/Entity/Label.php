@@ -6,6 +6,7 @@ class Label
 {
     public ?string $imageType;
     public ?string $labelStockType;
+    public ?string $labelFormatType = 'COMMON2D';
 
     /**
      * @param string  $imageType
@@ -27,15 +28,31 @@ class Label
         return $this;
     }
 
+    /**
+     * @param string  $labelFormatType
+     * @return $this
+     */
+    public function setLabelFormatType(string $labelFormatType): Label
+    {
+        $this->labelFormatType = $labelFormatType;
+        return $this;
+    }
+
     public function prepare(): array
     {
         $data = [];
         if (!empty($this->labelStockType)) {
             $data['labelStockType'] = $this->labelStockType;
         }
+
         if (!empty($this->imageType)) {
             $data['imageType'] = $this->imageType;
         }
+
+        if (!empty($this->labelFormatType)) {
+            $data['labelFormatType'] = $this->labelFormatType;
+        }
+
         return $data;
     }
 }

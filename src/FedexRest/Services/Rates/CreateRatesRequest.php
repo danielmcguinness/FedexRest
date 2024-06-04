@@ -12,10 +12,13 @@ use FedexRest\Services\AbstractRequest;
 use FedexRest\Services\Ship\Entity\Label;
 use FedexRest\Services\Ship\Entity\ShipmentSpecialServices;
 use FedexRest\Services\Ship\Entity\ShippingChargesPayment;
+use FedexRest\Traits\Conditionable;
 use GuzzleHttp\Exception\GuzzleException;
 
 class CreateRatesRequest extends AbstractRequest
 {
+    use Conditionable;
+
     protected Person $shipper;
     protected Person $recipient;
     protected Label $label;
@@ -360,12 +363,7 @@ class CreateRatesRequest extends AbstractRequest
 
         try {
           $prepare = $this->prepare();
-//          unset($prepare['requestedShipment']['requestedPackageLineItems'][0]['dimensions']);
-//          unset($prepare['requestedShipment']['requestedPackageLineItems'][0]['groupPackageCount']);
-//          unset($prepare['requestedShipment']['requestedPackageLineItems'][0]['sequenceNumber']);
-//          unset($prepare['requestedShipment']['requestedPackageLineItems'][0]['subPackagingType']);
-//          unset($prepare['requestedShipment']['requestedPackageLineItems'][0]['itemDescription']);
-//          unset($prepare['requestedShipment']['totalPackageCount']);
+
             $query = $this->http_client->post($this->getApiUri($this->api_endpoint), [
                 'json' => $prepare,
                 'http_errors' => false,

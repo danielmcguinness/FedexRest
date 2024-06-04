@@ -4,9 +4,15 @@ namespace FedexRest\Services\Ship;
 
 use FedexRest\Entity\Item;
 use FedexRest\Entity\Person;
+use FedexRest\Exceptions\MissingAccessTokenException;
 use FedexRest\Exceptions\MissingAccountNumberException;
 use FedexRest\Exceptions\MissingLineItemException;
 use FedexRest\Services\AbstractRequest;
+use FedexRest\Services\Ship\Entity\Label;
+use FedexRest\Services\Ship\Entity\ShipmentSpecialServices;
+use FedexRest\Services\Ship\Entity\ShippingChargesPayment;
+use GuzzleHttp\Exception\GuzzleException;
+use Psr\Http\Message\ResponseInterface;
 
 class CreateTagRequest extends AbstractRequest
 {
@@ -18,6 +24,9 @@ class CreateTagRequest extends AbstractRequest
     protected string $packaging_type;
     protected string $pickup_type;
     protected string $ship_datestamp = '';
+    protected ShippingChargesPayment $shippingChargesPayment;
+    protected ShipmentSpecialServices $shipmentSpecialServices;
+    protected Label $label;
 
     /**
      * @inheritDoc
@@ -156,58 +165,90 @@ class CreateTagRequest extends AbstractRequest
     }
 
     /**
+     * @param ShippingChargesPayment $shippingChargesPayment
+     * @return $this
+     */
+    public function setShippingChargesPayment(ShippingChargesPayment $shippingChargesPayment): CreateTagRequest
+    {
+        $this->shippingChargesPayment = $shippingChargesPayment;
+        return $this;
+    }
+
+    /**
+     * @return ShippingChargesPayment
+     */
+    public function getShippingChargesPayment(): ShippingChargesPayment
+    {
+        return $this->shippingChargesPayment;
+    }
+
+    /**
+     * @param ShipmentSpecialServices $shipmentSpecialServices
+     * @return $this
+     */
+    public function setShipmentSpecialServices(ShipmentSpecialServices $shipmentSpecialServices): CreateTagRequest
+    {
+        $this->shipmentSpecialServices = $shipmentSpecialServices;
+        return $this;
+    }
+
+    /**
+     * @return ShipmentSpecialServices
+     */
+    public function getShipmentSpecialServices(): ShipmentSpecialServices
+    {
+        return $this->shipmentSpecialServices;
+    }
+
+    /**
+     * @param Label $label
+     * @return $this
+     */
+    public function setLabel(Label $label): CreateTagRequest {
+        $this->label = $label;
+        return $this;
+    }
+
+    /**
+     * @return Label
+     */
+    public function getLabel(): Label
+    {
+        return $this->label;
+    }
+
+    /**
      * @return array[]
      */
     public function prepare(): array
     {
         return [
-            'json' => [
-                'labelResponseOptions' => 'LABEL',
-                'requestedShipment' => [
-                    'shipper' => $this->shipper->prepare(),
-                    'recipients' => array_map(fn(Person $person) => $person->prepare(), $this->recipients),
-                    'shipDatestamp' => $this->ship_datestamp,
-                    'serviceType' => $this->getServiceType(),
-                    'packagingType' => $this->getPackagingType(),
-                    'pickupType' => $this->getPickupType(),
-                    'blockInsightVisibility' => false,
-                    'shippingChargesPayment' => [
-                        'paymentType' => 'SENDER',
-                        'payor' => [
-                            'responsibleParty' => [
-                                'accountNumber' => [
-                                    'value' => $this->account_number
-                                ]
-                            ]
-                        ]
-                    ],
-                    'shipmentSpecialServices' => [
-                        'specialServiceTypes' => [
-                            'RETURN_SHIPMENT',
-                        ],
-                        'returnShipmentDetail' => [
-                            'returnType' => 'PRINT_RETURN_LABEL',
-                        ],
-                    ],
-                    'labelSpecification' => [
-                        'labelFormatType' => 'COMMON2D',
-                        'imageType' => 'PNG',
-                        'labelStockType' => 'PAPER_7X475',
-                    ],
-                    'requestedPackageLineItems' => [$this->getLineItems()->prepare()],
-                ],
-                'accountNumber' => [
-                    'value' => $this->account_number,
-                ],
+            'labelResponseOptions' => 'LABEL',
+            'requestedShipment' => [
+                'shipper' => $this->shipper->prepare(),
+                'recipients' => array_map(fn(Person $person) => $person->prepare(), $this->recipients),
+                'shipDatestamp' => $this->ship_datestamp,
+                'serviceType' => $this->getServiceType(),
+                'packagingType' => $this->getPackagingType(),
+                'pickupType' => $this->getPickupType(),
+                'blockInsightVisibility' => false,
+                'shippingChargesPayment' => $this->shippingChargesPayment->prepare(),
+                'shipmentSpecialServices' => $this->shipmentSpecialServices->prepare(),
+                'labelSpecification' => $this->label->prepare(),
+                'requestedPackageLineItems' => [$this->getLineItems()->prepare()],
+            ],
+            'accountNumber' => [
+                'value' => $this->account_number,
             ],
         ];
     }
 
     /**
-     * @return mixed|\Psr\Http\Message\ResponseInterface|void
+     * @return mixed|ResponseInterface|void
      * @throws MissingAccountNumberException
      * @throws MissingLineItemException
-     * @throws \FedexRest\Exceptions\MissingAccessTokenException
+     * @throws MissingAccessTokenException
+     * @throws GuzzleException
      */
     public function request()
     {
@@ -219,7 +260,11 @@ class CreateTagRequest extends AbstractRequest
             throw new MissingLineItemException('Line items are required');
         }
 
-        $query = $this->http_client->post($this->getApiUri($this->api_endpoint), $this->prepare());
+        $query = $this->http_client->post($this->getApiUri($this->api_endpoint), [
+            'json' => $this->prepare(),
+            'http_errors' => false,
+        ]);
+
         return ($this->raw === true) ? $query : json_decode($query->getBody()->getContents());
     }
 

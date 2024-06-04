@@ -523,6 +523,7 @@ class CreateShipment extends AbstractRequest
         if (!empty($this->processingOptionType)) {
             $data['processingOptionType'] = $this->processingOptionType;
         }
+
         return $data;
     }
 
